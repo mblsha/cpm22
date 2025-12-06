@@ -1,6 +1,4 @@
-I'll answer as a world-famous computer archaeologist & OS engineer, PhD in 8-bit operating systems, with the ACM Software System Award.
-
-**TL;DR**: This is CP/M 2.2 BDOS + its BDOS-interface “front end”. The ABI is the classic CP/M one: user calls `CALL 0005h` with function in `C` and parameter in `DE`; BDOS returns a 16‑bit result in `HL` (mirrored into `B:A`). This code dispatches `C` through a function table; many BDOS services are thin wrappers around BIOS jump-table calls (console, disk).
+Reference for the CP/M 2.2 BDOS and its BDOS-interface “front end” as implemented in this repository. The ABI is the classic CP/M one: user code calls `CALL 0005h` with the function in `C` and parameter in `DE`; BDOS returns a 16‑bit result in `HL` (mirrored into `B:A`). This module dispatches `C` through a function table; many BDOS services are thin wrappers around BIOS jump-table calls (console, disk).
 
 ---
 
@@ -62,7 +60,7 @@ CP/M BIOS is a jump table at label `bios`, with each entry 3 bytes (`JMP ...`). 
 
 ## 2) Global state the code maintains (named like the assembly)
 
-I’ll describe these as globals (they’re literally bytes/words in BDOS memory):
+The fields below are globals in BDOS memory, kept here with the assembly names:
 
 ```pseudocode
 # Console editing / echo state
@@ -1428,5 +1426,4 @@ No tables—just a compact rundown with the key ABI notes:
 
 ---
 
-If you want, I can also rewrite the pseudocode in a more “structured C” form with typed structs for `FCB`, `DPB`, and `DiskHeader`—same logic, just less pointer-y.
-
+This walkthrough follows the original control flow closely so the assembly labels map to the pseudocode. It is intended to stand alone as a reference for the BDOS entry stack, ABI, and per-function responsibilities.

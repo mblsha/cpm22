@@ -1,4 +1,4 @@
-Below is an “easy-to-follow” pseudocode rewrite of **CP/M 2.2 CCP** (Console Command Processor) as represented by your `ccp.asm`, with the **BDOS ABI** and every **BDOS call** clearly annotated (CCP does **not** call BIOS directly; it goes through BDOS at `0005h`).
+Pseudocode rewrite of **CP/M 2.2 CCP** (Console Command Processor) as represented by the repository’s `ccp.asm`, with the **BDOS ABI** and every **BDOS call** clearly annotated (CCP does **not** call BIOS directly; it goes through BDOS at `0005h`).
 
 ---
 
@@ -48,7 +48,7 @@ CCP then uppercases the command and appends a `0` byte terminator for scanning.
 
 ## 2) BDOS functions used by CCP (numbers + meaning + parameter)
 
-(These match your `equ` list.)
+(Matches the `equ` list in `ccp.asm`.)
 
 * **1** `CONIN` read char → returns `A=char`
 * **2** `CONOUT` print char (`E=char`)
@@ -263,7 +263,7 @@ Key idea: `comaddr` points into the NUL-terminated command line. `fillfcb(offset
 * advances `comaddr` past this token
 * returns number of `?` wildcards in name+type (Z flag in assembly corresponds to “no ?”)
 
-Delimiter set includes: blank, `=`, left-arrow (`_` in your listing via `la=0x5F`), `.`, `:`, `;`, `<`, `>`, NUL.
+Delimiter set includes: blank, `=`, left-arrow (`_` in the listing via `la=0x5F`), `.`, `:`, `;`, `<`, `>`, NUL.
 
 ```pseudocode
 function is_delim(ch) -> bool:
@@ -788,5 +788,4 @@ function endcom_check_garbage():
 
 ---
 
-If you paste the rest of `ccp.asm` (or confirm there isn’t more), I can also produce a second version where the pseudocode is organized as a neat “CCP state machine” (PROMPT → READ → PARSE → DISPATCH → DONE), but the logic above already matches each labeled routine one-for-one.
-
+This rewrite mirrors the CCP control flow in `ccp.asm` and is intended to serve as a standalone reference for the command buffer handling, FCB parsing, BDOS interactions, and built-in command logic.

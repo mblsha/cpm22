@@ -1,4 +1,4 @@
-Here’s the **second version** of the CCP rewrite, organized as a **single explicit state machine** (PROMPT → READ → PARSE → DISPATCH → CLEANUP), with **BDOS ABI annotations** embedded at each call site.
+Second version of the CCP rewrite, organized as a **single explicit state machine** (PROMPT → READ → PARSE → DISPATCH → CLEANUP) with **BDOS ABI annotations** embedded at each call site.
 
 ---
 
@@ -724,5 +724,4 @@ function DO_TRANSIENT_OR_DISKSWITCH():
 
 ---
 
-If you want a third style, I can also emit the same state machine as a **single continuous “switch(state)” loop** (C-like), but the version above keeps the CCP’s original subroutine boundaries readable while still making the global control flow totally explicit.
-
+This version keeps the CCP subroutine boundaries recognizable while making the global control flow explicit for reference use.
