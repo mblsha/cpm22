@@ -12,6 +12,7 @@
 - When adding or reordering BDOS functions, update `nfuncs`/`functab` consistently and consider impacts on CCP and applications expecting stable numbers.
 
 ## BDOS Functions (Python-style pseudocode)
+`bios.*` calls below represent BIOS jump-table entries (hardware-specific, not implemented in this repo). BDOS wrappers like `conech`, `conoutf`, `constf`, `setdata`, etc., ultimately dispatch to those BIOS jumps.
 ```python
 def bdos_dispatch(func, info_ptr):
     # args: C=function code, DE=info/FCB pointer; returns aret (A/B)

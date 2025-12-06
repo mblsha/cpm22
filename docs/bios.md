@@ -2,6 +2,8 @@
 
 BIOS provides the machine-specific routines CP/M depends on. BDOS calls these via a jump table (3-byte JMPs) laid out consecutively at the top of the BIOS region.
 
+This repository does not include a BIOS implementation; the routines below must be supplied by the target platform. Where the BDOS pseudocode shows `bios.*` calls, they refer to these externally provided entries.
+
 ## Call Conventions
 - Entry via the BIOS jump table; each entry is a `JMP` to the routine.
 - Registers: `A`, `B`, `C`, `D`, `E`, `H`, `L` per routine below. Return values are typically in `A` (and/or `BC`), with flags set/cleared as noted.
