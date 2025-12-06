@@ -42,16 +42,18 @@ def list_output(info): return listf(C)
 
 def direct_conio(info):
     # args: C holds mode/value; returns char/status
+    # returns: A (char or status)
     if C == 0xFF: return coninf() if constf() else 0
     if C == 0xFE: return constf()
     conoutf(C); return C
 
-def get_iobyte(info): return ioloc
-def set_iobyte(info): ioloc = C
-def print_string(info): print_until_dollar(BC)
+def get_iobyte(info): return ioloc  # returns: A
+def set_iobyte(info): ioloc = C     # returns: A unchanged
+def print_string(info): print_until_dollar(BC)  # returns: none
 
 def buffered_read(info):
     # args: info -> [maxlen, curlen, buffer...]; returns new length
+    # returns: A (length)
     editor_state = read_line_with_echo(info)
     return editor_state.length
 
@@ -60,6 +62,7 @@ def get_version(info): return dvers
 
 def reset_disks(info):
     # args: none; clears vectors and selects drive 0
+    # returns: A=curdsk after select
     rodsk = 0
     dlog = 0
     curdsk = 0
@@ -69,6 +72,7 @@ def reset_disks(info):
 
 def select_disk(info):
     # args: linfo=desired drive; returns current drive
+    # returns: A=curdsk
     desired = linfo & 0x1F
     if desired != curdsk:
         curdsk = desired
@@ -77,6 +81,7 @@ def select_disk(info):
 
 def open_file(info):
     # args: info -> FCB address
+    # returns: A status (0=ok, FFh=not found)
     fcb = info
     clrmodnum(fcb)
     reselect(fcb)
@@ -84,12 +89,14 @@ def open_file(info):
 
 def close_file(info):
     # args: info -> FCB address
+    # returns: A status
     fcb = info
     reselect(fcb)
     return close(fcb)
 
 def search_first(info):
     # args: info -> FCB address; returns search status
+    # returns: A status (FFh if none), and fills DMA with dir entry
     fcb = info
     clrmodnum_if_not_wildcard(fcb)
     reselect(fcb)
@@ -99,6 +106,7 @@ def search_first(info):
 
 def search_next(info):
     # args: searcha saved cursor; returns search status
+    # returns: A status, DMA filled
     reselect(info_from(searcha))
     status = searchn(info_from(searcha))
     dir_to_user(status, dmaad)
@@ -106,6 +114,7 @@ def search_next(info):
 
 def delete_file(info):
     # args: info -> FCB address
+    # returns: A status
     fcb = info
     reselect(fcb)
     status = delete(fcb)
@@ -114,18 +123,21 @@ def delete_file(info):
 
 def seq_read(info):
     # args: info -> FCB address
+    # returns: A status (0=ok, 1=EOF, others=errors)
     fcb = info
     reselect(fcb)
     return seqdiskread(fcb)
 
 def seq_write(info):
     # args: info -> FCB address
+    # returns: A status
     fcb = info
     reselect(fcb)
     return seqdiskwrite(fcb)
 
 def make_file(info):
     # args: info -> FCB address
+    # returns: A status
     fcb = info
     clrmodnum(fcb)
     reselect(fcb)
@@ -133,25 +145,28 @@ def make_file(info):
 
 def rename_file(info):
     # args: info -> FCB with old/new halves
+    # returns: A status
     fcb = info
     reselect(fcb)
     status = rename(fcb)
     copy_dirloc(status)
     return status
 
-def get_login_vector(info): return dlog
-def get_current_disk(info): return curdsk
-def set_dma(info): dmaad = info; return setdata()
-def get_alloc_vector(info): return alloca
+def get_login_vector(info): return dlog          # returns: HL (aret)
+def get_current_disk(info): return curdsk        # returns: A
+def set_dma(info): dmaad = info; return setdata()# returns: none (A unchanged)
+def get_alloc_vector(info): return alloca        # returns: HL (aret)
 
 def set_read_only(info):
     # args: uses curdsk; marks rodsk and BIOS state
+    # returns: A status
     set_ro(curdsk); return rodsk
 
-def get_read_only(info): return rodsk
+def get_read_only(info): return rodsk            # returns: HL (aret)
 
 def set_attributes(info):
     # args: info -> FCB address
+    # returns: A status; dirloc in HL
     fcb = info
     reselect(fcb)
     status = indicators(fcb)
@@ -162,6 +177,7 @@ def get_dpb(info): return dpbaddr
 
 def set_or_get_user(info):
     # args: linfo=0xFF to query else new user code
+    # returns: A (user code)
     if linfo == 0xFF:
         return usrcode
     usrcode = linfo & 0x1F
@@ -169,29 +185,34 @@ def set_or_get_user(info):
 
 def random_read(info):
     # args: info -> FCB with ranrec
+    # returns: A status
     fcb = info
     reselect(fcb)
     return randiskread(fcb)
 
 def random_write(info):
     # args: info -> FCB with ranrec
+    # returns: A status
     fcb = info
     reselect(fcb)
     return randiskwrite(fcb)
 
 def file_size(info):
     # args: info -> FCB; writes ranrec
+    # returns: A status; ranrec in FCB
     fcb = info
     reselect(fcb)
     return getfilesize(fcb)  # writes ranrec
 
 def set_random_record(info):
     # args: info -> FCB ranrec
+    # returns: none (A unaffected)
     fcb = info
     return setrandom(fcb)
 
 def mask_vectors(info):
     # args: info points to word mask; clears bits in dlog/rodsk
+    # returns: HL (aret) containing updated vectors
     mask = ~fetch_word(info)
     dlog &= mask
     rodsk &= mask
@@ -201,6 +222,7 @@ def func_ret(info): return aret  # placeholder for 38/39
 
 def random_write_zerofill(info):
     # args: info -> FCB with ranrec
+    # returns: A status
     fcb = info
     reselect(fcb)
     seqio = 2

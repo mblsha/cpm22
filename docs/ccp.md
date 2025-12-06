@@ -14,6 +14,7 @@
 ```python
 def ccpstart(c_user_disk):
     # args: C (low nibble)=disk, C (high nibble)=user; returns via tail calls
+    # returns: none (jumps into loop)
     comlen = 0
     diska = (c_user_disk << 4) | (c_user_disk & 0x0F)
     submit = initialize()          # BDOS initf; returns FFh if $$$.SUB
@@ -23,6 +24,7 @@ def ccpstart(c_user_disk):
 
 def readcom():
     # args: none; uses submit flag, combuf/comlen; returns command text
+    # returns: Python return only (no register)
     if submit:
         select(0)
         open(subfcb)
@@ -41,6 +43,7 @@ def readcom():
 
 def fillfcb(offset=0):
     # args: comaddr pointer; returns qmark count in A-equivalent
+    # returns: A (count of '?')
     fcb = comfcb + offset
     staddr = comaddr
     sdisk = parse_drive_prefix(comaddr) or 0
@@ -54,6 +57,7 @@ def fillfcb(offset=0):
 
 def intrinsic_index():
     # args: comfcb name/type; returns intrinsic index or None
+    # returns: A (intrinsic index) or carry in real code; here Python return
     for i, token in enumerate(["DIR ", "ERA ", "TYPE", "SAVE", "REN ", "USER"]):
         if comfcb.name_type_prefix_matches(token):
             return i
@@ -61,6 +65,7 @@ def intrinsic_index():
 
 def ccp_loop():
     # args: none; main command loop
+    # returns: none (loops)
     while True:
         prompt(current_drive_letter())
         readcom()
@@ -80,6 +85,7 @@ def ccp_loop():
 
 def direct():  # DIR
     # args: comfcb; uses searchcom/searchn; returns to prompt
+    # returns: none
     if comfcb.name_is_blank():
         comfcb.name_type = "???????????"
     setdisk()
@@ -94,6 +100,7 @@ def direct():  # DIR
 
 def erase():   # ERA
     # args: comfcb; returns to prompt
+    # returns: A status from delete in real code; here none
     setdisk()
     if fillfcb() == 11 and confirm("ALL (Y/N)?") is False:
         return
@@ -104,6 +111,7 @@ def erase():   # ERA
 
 def type():    # TYPE
     # args: comfcb; streams file to console
+    # returns: none
     setdisk()
     if not open(comfcb):
         print("NO FILE")
@@ -124,6 +132,7 @@ def type():    # TYPE
 
 def save():    # SAVE n,<file>
     # args: number in comfcb text; writes memory to disk
+    # returns: A status from BDOS in real code; here none
     sectors = parse_number_from_comfcb()
     if fillfcb():
         error_from(staddr)
@@ -145,6 +154,7 @@ def save():    # SAVE n,<file>
 
 def rename():  # REN old=new
     # args: comfcb (old) and comfcb+16 (new)
+    # returns: A status from BDOS in real code; here none
     if fillfcb():
         error_from(staddr)
         return
@@ -165,6 +175,7 @@ def rename():  # REN old=new
 
 def user():    # USER n
     # args: number in comfcb; sets user code
+    # returns: A status from BDOS setuser; here none
     n = parse_number_from_comfcb()
     if n >= 16 or comfcb.name_not_blank():
         error_from(staddr)
@@ -173,6 +184,7 @@ def user():    # USER n
 
 def userfunc():  # load transient
     # args: comfcb; loads .COM to tran, passes control
+    # returns: transfers control to transient; no register return
     if comfcb.name_blank() and sdisk:
         select(sdisk - 1)
         return
