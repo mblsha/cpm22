@@ -13,6 +13,7 @@
 ## Routines (Python-style pseudocode)
 ```python
 def ccpstart(c_user_disk):
+    # args: C (low nibble)=disk, C (high nibble)=user; returns via tail calls
     comlen = 0
     diska = (c_user_disk << 4) | (c_user_disk & 0x0F)
     submit = initialize()          # BDOS initf; returns FFh if $$$.SUB
@@ -21,6 +22,7 @@ def ccpstart(c_user_disk):
     return ccp_loop()
 
 def readcom():
+    # args: none; uses submit flag, combuf/comlen; returns command text
     if submit:
         select(0)
         open(subfcb); subcr = subrc - 1
@@ -33,6 +35,7 @@ def readcom():
     comaddr = combuf; return combuf
 
 def fillfcb(offset=0):
+    # args: comaddr pointer; returns qmark count in A-equivalent
     fcb = comfcb + offset; staddr = comaddr
     sdisk = parse_drive_prefix(comaddr) or 0
     name, type, comaddr = parse_name_and_type(comaddr)  # pads with ' ' or '?'
@@ -40,11 +43,13 @@ def fillfcb(offset=0):
     zero(fcb[12:16]); zero(fcb[16:32]); return count_qmarks(name+type)
 
 def intrinsic_index():
+    # args: comfcb name/type; returns intrinsic index or None
     for i, token in enumerate(["DIR ", "ERA ", "TYPE", "SAVE", "REN ", "USER"]):
         if comfcb.name_type_prefix_matches(token): return i
     return None
 
 def ccp_loop():
+    # args: none; main command loop
     while True:
         prompt(current_drive_letter())
         readcom()
@@ -56,6 +61,7 @@ def ccp_loop():
         dispatch_intrinsic(idx) if idx is not None else userfunc()
 
 def direct():  # DIR
+    # args: comfcb; uses searchcom/searchn; returns to prompt
     if comfcb.name_is_blank(): comfcb.name_type = "???????????"
     setdisk(); entries = []
     if searchcom(): entries.append(dir_entry_from_dma())
@@ -64,12 +70,14 @@ def direct():  # DIR
     resetdisk(); return
 
 def erase():   # ERA
+    # args: comfcb; returns to prompt
     setdisk()
     if fillfcb() == 11 and confirm("ALL (Y/N)?") is False: return
     status = delete(comfcb); print("NO FILE") if status == 0xFF else None
     resetdisk()
 
 def type():    # TYPE
+    # args: comfcb; streams file to console
     setdisk()
     if not open(comfcb): print("NO FILE"); resetdisk(); return
     while True:
@@ -80,6 +88,7 @@ def type():    # TYPE
             if break_key(): resetdisk(); return
 
 def save():    # SAVE n,<file>
+    # args: number in comfcb text; writes memory to disk
     sectors = parse_number_from_comfcb()
     if fillfcb(): error_from(staddr); return
     setdisk(); delete(comfcb); make(comfcb)
@@ -90,6 +99,7 @@ def save():    # SAVE n,<file>
     close(comfcb); setdmabuff(); resetdisk()
 
 def rename():  # REN old=new
+    # args: comfcb (old) and comfcb+16 (new)
     if fillfcb(): error_from(staddr); return
     left_drive = sdisk; left = comfcb.clone()
     right_q = fillfcb(offset=16); right_drive = sdisk
@@ -99,11 +109,13 @@ def rename():  # REN old=new
     renam(comfcb); resetdisk()
 
 def user():    # USER n
+    # args: number in comfcb; sets user code
     n = parse_number_from_comfcb()
     if n >= 16 or comfcb.name_not_blank(): error_from(staddr); return
     setuser(n)
 
 def userfunc():  # load transient
+    # args: comfcb; loads .COM to tran, passes control
     if comfcb.name_blank() and sdisk: select(sdisk-1); return
     ensure_type(comfcb, "COM"); setdisk()
     if not open(comfcb): resetdisk(); error_from(staddr); return

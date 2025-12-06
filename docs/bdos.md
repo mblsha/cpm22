@@ -14,6 +14,7 @@
 ## BDOS Functions (Python-style pseudocode)
 ```python
 def bdos_dispatch(func, info_ptr):
+    # args: C=function code, DE=info/FCB pointer; returns aret (A/B)
     info = info_ptr; linfo = low_byte(info_ptr)
     save_user_stack_to(lstack); aret = 0
     return [
@@ -38,6 +39,7 @@ def punch_output(info): return punchf(C)
 def list_output(info): return listf(C)
 
 def direct_conio(info):
+    # args: C holds mode/value; returns char/status
     if C == 0xFF: return coninf() if constf() else 0
     if C == 0xFE: return constf()
     conoutf(C); return C
@@ -47,7 +49,7 @@ def set_iobyte(info): ioloc = C
 def print_string(info): print_until_dollar(BC)
 
 def buffered_read(info):
-    # info -> [maxlen, curlen, buffer...]
+    # args: info -> [maxlen, curlen, buffer...]; returns new length
     editor_state = read_line_with_echo(info)
     return editor_state.length
 
@@ -55,42 +57,53 @@ def con_status(info): return conbrk()
 def get_version(info): return dvers
 
 def reset_disks(info):
+    # args: none; clears vectors and selects drive 0
     rodsk = 0; dlog = 0; curdsk = 0; dmaad = tbuff
     bios.select(0); setdata()
 
 def select_disk(info):
+    # args: linfo=desired drive; returns current drive
     desired = linfo & 0x1F
     if desired != curdsk: curdsk = desired; bios.select(desired)
     return curdsk
 
 def open_file(info):
+    # args: info -> FCB address
     fcb = info; clrmodnum(fcb); reselect(fcb); return open(fcb)
 
 def close_file(info):
+    # args: info -> FCB address
     fcb = info; reselect(fcb); return close(fcb)
 
 def search_first(info):
+    # args: info -> FCB address; returns search status
     fcb = info; clrmodnum_if_not_wildcard(fcb)
     reselect(fcb); status = search(fcb)
     dir_to_user(status, dmaad); return status
 
 def search_next(info):
+    # args: searcha saved cursor; returns search status
     reselect(info_from(searcha)); status = searchn(info_from(searcha))
     dir_to_user(status, dmaad); return status
 
 def delete_file(info):
+    # args: info -> FCB address
     fcb = info; reselect(fcb); status = delete(fcb); copy_dirloc(status); return status
 
 def seq_read(info):
+    # args: info -> FCB address
     fcb = info; reselect(fcb); return seqdiskread(fcb)
 
 def seq_write(info):
+    # args: info -> FCB address
     fcb = info; reselect(fcb); return seqdiskwrite(fcb)
 
 def make_file(info):
+    # args: info -> FCB address
     fcb = info; clrmodnum(fcb); reselect(fcb); return make(fcb)
 
 def rename_file(info):
+    # args: info -> FCB with old/new halves
     fcb = info; reselect(fcb); status = rename(fcb); copy_dirloc(status); return status
 
 def get_login_vector(info): return dlog
@@ -99,38 +112,47 @@ def set_dma(info): dmaad = info; return setdata()
 def get_alloc_vector(info): return alloca
 
 def set_read_only(info):
+    # args: uses curdsk; marks rodsk and BIOS state
     set_ro(curdsk); return rodsk
 
 def get_read_only(info): return rodsk
 
 def set_attributes(info):
+    # args: info -> FCB address
     fcb = info; reselect(fcb); status = indicators(fcb); copy_dirloc(status); return status
 
 def get_dpb(info): return dpbaddr
 
 def set_or_get_user(info):
+    # args: linfo=0xFF to query else new user code
     if linfo == 0xFF: return usrcode
     usrcode = linfo & 0x1F; return usrcode
 
 def random_read(info):
+    # args: info -> FCB with ranrec
     fcb = info; reselect(fcb); return randiskread(fcb)
 
 def random_write(info):
+    # args: info -> FCB with ranrec
     fcb = info; reselect(fcb); return randiskwrite(fcb)
 
 def file_size(info):
+    # args: info -> FCB; writes ranrec
     fcb = info; reselect(fcb); return getfilesize(fcb)  # writes ranrec
 
 def set_random_record(info):
+    # args: info -> FCB ranrec
     fcb = info; return setrandom(fcb)
 
 def mask_vectors(info):
+    # args: info points to word mask; clears bits in dlog/rodsk
     mask = ~fetch_word(info)
     dlog &= mask; rodsk &= mask; return rodsk
 
 def func_ret(info): return aret  # placeholder for 38/39
 
 def random_write_zerofill(info):
+    # args: info -> FCB with ranrec
     fcb = info; reselect(fcb); seqio = 2
     if rseek1(fcb): diskwrite(fcb)
 ```
