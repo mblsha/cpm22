@@ -18,6 +18,99 @@
 - `AA00h` and above (approx): BIOS for the 44K layout; top of RAM holds BIOS jump table.
 - TPA ends just below CCP (`93FFh` in this layout), so user programs have ~0x92FF bytes minus their own stack/data.
 
+## In-Memory Structures (Kaitai Struct style)
+```yaml
+meta:
+  id: cpm_command_tail
+  endian: le
+seq:
+  - id: len
+    type: u1          # CP/M stores length in the first byte at 0x80
+  - id: text
+    type: str
+    size: len
+    encoding: ascii
+  - id: padding
+    size-eos: true    # remaining bytes up to 128 total
+```
+```yaml
+meta:
+  id: cpm_fcb
+  endian: le
+seq:
+  - id: drive
+    type: u1          # 0=current, 1=A, ...
+  - id: filename
+    type: str
+    size: 8
+    encoding: ascii   # space-padded
+  - id: filetype
+    type: str
+    size: 3
+    encoding: ascii   # space-padded
+  - id: extent
+    type: u1
+  - id: s1_reserved
+    type: u1
+  - id: s2_modnum
+    type: u1
+  - id: record_count
+    type: u1
+  - id: alloc_map
+    type: u1
+    repeat: expr
+    repeat-expr: 16   # bytes 16–31
+  - id: next_record
+    type: u1          # byte 32
+  - id: random_record
+    type: u2le        # bytes 33–34, used by random I/O
+```
+```yaml
+meta:
+  id: ccp_submit_state
+  endian: le
+seq:
+  - id: submit_flag
+    type: u1          # 0=no submit, 0xFF active
+  - id: submit_fcb
+    type: cpm_fcb     # starts with "$$$.SUB"
+  - id: module_number
+    type: u1
+  - id: record_count
+    type: u1
+  - id: disk_map
+    type: u1
+    repeat: expr
+    repeat-expr: 16
+  - id: current_record
+    type: u1
+```
+```yaml
+meta:
+  id: bdos_drive_runtime
+  endian: le
+seq:
+  - id: sectors_per_track
+    type: u2
+  - id: block_shift
+    type: u1
+  - id: block_mask
+    type: u1
+  - id: extent_mask
+    type: u1
+  - id: max_allocation
+    type: u2
+  - id: dir_max_entry
+    type: u2
+  - id: dir_reserved_bits
+    type: u2
+  - id: checksum_size
+    type: u2
+  - id: track_offset
+    type: u2
+```
+These definitions cover the default command tail at `0x80`, the 32-byte CP/M FCB with its random-record extension, CCP’s submit state block, and the BDOS per-drive runtime fields derived from the active DPB (`sectpt`..`offset`).
+
 ## Reset/Init Flow
 - Cold/warm boot enters at `0000h`, which transfers to CCP. CCP uses BDOS `initf` to detect `$$$.SUB`, sets user/disk, then prompts.
 - BDOS saves caller stack to `lstack` and restores on return; `goback` cleans up any auto drive selection before returning to the caller’s stack/PC.
