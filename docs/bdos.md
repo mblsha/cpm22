@@ -236,11 +236,145 @@ def random_write_zerofill(info):
 - `goback/retmon`: On exit, if reselection occurred, restores FCB[0] drive and previous `curdsk`, then restores user stack (`entsp`) and returns `aret` in `A`/`B`.
 - Disk helpers: `seqdiskread/seqdiskwrite` manage current record (`rcount`), extent (`extval`), allocation map (`alloca`), and DMA; `randiskread/randiskwrite/rseek1` use random record field; `getfilesize` scans extents to compute `ranrec`; `dir_to_user`/`copy_dirloc` move directory entries to DMA; `set_ro` flips `rodsk` bit and sets error flags.
 
-## In-Memory Structures
-- **Global state:** `usrcode` (current user), `curdsk` (selected drive), `info` (user parameter pointer), `aret` (return value), `dmaad` (current DMA address).
-- **Console editor state:** `column/strtcol/compcol/listcp/kbchar` plus `lstack` for BDOS stack.
-- **Disk/login vectors:** `dlog` (logged-in drives bitmask), `rodsk` (read-only drives), `efcb` (empty dir entry template).
-- **Per-select drive pointers (written by BIOS select):** `curtrka`, `curreca`, `buffa` (directory DMA), `dpbaddr` (DPB), `checka` (checksum vector), `alloca` (allocation vector), `cdrmaxa` (dir max pointer).
-- **DPB-derived fields:** `sectpt` (sectors/track), `blkshf`/`blkmsk` (block geometry), `extmsk`, `maxall`, `dirmax`, `dirblk`, `chksiz`, `offset`; contiguous block referenced via `dpblist`.
-- **FCB layout (at `tfcb` by default):** byte 0 drive code (0=current, 1=A,...), bytes 1–8 name, 9–11 type, 12 extent, 13 S1 (unused), 14 module number/flags, 15 record count, 16–31 allocation map, 32 next record, 33–34 random record.
-- **Working variables:** `searcha/searchl` (search cursor), `dirloc` (directory position), `rcount/extval` (current record/extents), `vrecord/arecord/arecord1` (logical/physical record tracking), `seqio` (sequential vs random), `tranv` (sector translation vector), `single` (allocation map entry width), `resel/fcbdsk/olddsk/linfo` (drive-selection bookkeeping).
+## In-Memory Structures (Kaitai Struct style)
+```yaml
+meta:
+  id: bdos_globals
+  endian: le
+seq:
+  - id: efcb
+    type: u1          # empty dir entry template (0xE5)
+  - id: rodsk
+    type: u2le        # read-only drive bitmask
+  - id: dlog
+    type: u2le        # logged-in drive bitmask
+  - id: dmaad
+    type: u2le        # current DMA address (default 0x0080)
+```
+```yaml
+meta:
+  id: bdos_drive_select_block
+  endian: le
+seq:
+  - id: cdrmaxa
+    type: u2le        # pointer to current dir max
+  - id: curtrka
+    type: u2le        # current track
+  - id: curreca
+    type: u2le        # current record
+  - id: buffa
+    type: u2le        # directory DMA pointer
+  - id: dpbaddr
+    type: u2le        # disk parameter block pointer
+  - id: checka
+    type: u2le        # checksum vector pointer
+  - id: alloca
+    type: u2le        # allocation bitmap pointer
+```
+```yaml
+meta:
+  id: bdos_dpb_runtime
+  endian: le
+seq:
+  - id: sectors_per_track
+    type: u2le
+  - id: block_shift
+    type: u1
+  - id: block_mask
+    type: u1
+  - id: extent_mask
+    type: u1
+  - id: max_allocation
+    type: u2le
+  - id: dir_max_entry
+    type: u2le
+  - id: dir_reserved_bits
+    type: u2le
+  - id: checksum_size
+    type: u2le
+  - id: track_offset
+    type: u2le
+```
+```yaml
+meta:
+  id: bdos_working_vars
+  endian: le
+seq:
+  - id: tranv
+    type: u2le        # translate vector address (if any)
+  - id: fcb_copied
+    type: u1
+  - id: rmf
+    type: u1
+  - id: dirloc
+    type: u1
+  - id: seqio
+    type: u1
+  - id: linfo
+    type: u1
+  - id: dminx
+    type: u1
+  - id: searchl
+    type: u1
+  - id: searcha
+    type: u2le
+  - id: tinfo
+    type: u2le
+  - id: single
+    type: u1
+  - id: resel
+    type: u1
+  - id: olddsk
+    type: u1
+  - id: fcbdsk
+    type: u1
+  - id: rcount
+    type: u1
+  - id: extval
+    type: u1
+  - id: vrecord
+    type: u2le
+  - id: arecord
+    type: u2le
+  - id: arecord1
+    type: u2le
+  - id: dptr
+    type: u1
+  - id: dcnt
+    type: u2le
+  - id: drec
+    type: u2le
+```
+```yaml
+meta:
+  id: cpm_fcb
+  endian: le
+seq:
+  - id: drive
+    type: u1          # 0=current, 1=A, ...
+  - id: filename
+    type: str
+    size: 8
+    encoding: ascii   # space-padded
+  - id: filetype
+    type: str
+    size: 3
+    encoding: ascii   # space-padded
+  - id: extent
+    type: u1
+  - id: s1_reserved
+    type: u1
+  - id: s2_modnum
+    type: u1
+  - id: record_count
+    type: u1
+  - id: alloc_map
+    type: u1
+    repeat: expr
+    repeat-expr: 16
+  - id: next_record
+    type: u1
+  - id: random_record
+    type: u2le
+```
+Use these structures to map BDOS data areas when inspecting memory dumps or debugging the running system. Addresses vary with origin; the order shown matches the layout in `bdos.asm`.
