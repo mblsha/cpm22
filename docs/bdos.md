@@ -37,16 +37,19 @@ def bdos_dispatch(func, info_ptr):
 def warm_boot(info): bios.wbootf()  # no return
 def con_input(info): return conech()
 def con_output(info): return tabout(C)
-def reader_input(info): return readerf()
-def punch_output(info): return punchf(C)
-def list_output(info): return listf(C)
+def reader_input(info): return bios.readerf()
+def punch_output(info): return bios.punchf(C)
+def list_output(info): return bios.listf(C)
 
 def direct_conio(info):
     # args: C holds mode/value; returns char/status
     # returns: A (char or status)
-    if C == 0xFF: return coninf() if constf() else 0
-    if C == 0xFE: return constf()
-    conoutf(C); return C
+    if C == 0xFF:
+        return bios.coninf() if bios.constf() else 0
+    if C == 0xFE:
+        return bios.constf()
+    bios.conoutf(C)
+    return C
 
 def get_iobyte(info): return ioloc  # returns: A
 def set_iobyte(info): ioloc = C     # returns: A unchanged
