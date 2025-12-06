@@ -1,8 +1,8 @@
 # CP/M 2.2 Architecture Cheatsheet
 
 ## CPU and Registers
-- 8080/Z80-compatible: `A` (accumulator), `B/C`, `D/E`, `H/L` pairs; `SP`, `PC`, and flags (`Z`, `C`, `S`, `P`, `AC`).
-- BDOS calling convention: `C` = function number, `DE` = pointer (FCB, DMA, buffer, etc.), returns in `A` (and `B`/`HL` for some routines via `aret`).
+- 8080/Z80-compatible 8-bit registers: `A` (accumulator), `B`, `C`, `D`, `E`, `H`, `L`; 16-bit pairs: `BC`, `DE`, `HL`. Pointers: `SP` (16-bit stack), `PC` (16-bit program counter). Flags: `Z`, `C`, `S`, `P`, `AC`.
+- BDOS calling convention: `C` (8-bit) = function number, `DE` (16-bit) = pointer (FCB, DMA, buffer, etc.), returns in `A` (8-bit) and sometimes `HL`/`B` (16-bit via `aret`).
 
 ## Memory Map (44K build in this repo)
 - `0000h`: warm boot vector (JMP to CCP/BIOS); rebooting user programs jump here or call BDOS func 0.
